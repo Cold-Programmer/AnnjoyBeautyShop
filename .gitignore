@@ -1,0 +1,108 @@
+# ==========================================
+# GLOW 'N' GO Beauty & Cosmetics Platform
+# ==========================================
+
+# Dependencies
+node_modules/
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Next.js
+.next/
+out/
+
+# Build files
+dist/
+build/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Uploads (generated at runtime)
+backend/src/uploads/
+uploads/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Package Manager Lock Files
+pnpm-lock.yaml
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# VS Code
+.vscode/
+.history/
+
+# JetBrains IDEs
+.idea/
+
+# Temporary Files
+tmp/
+temp/
+.cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+
+# Docker
+docker-data/
+
+# Generated files
+*.pid
+*.seed
+*.pid.lock
+
+# SSL Certificates
+*.pem
+*.key
+*.crt
+
+# Local configuration
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+
+# Vercel
+.vercel/
+
+# npm cache
+.npm/
+
+# Yarn
+.yarn/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Mac/Linux swap files
+*~
+*.swp
+*.swo
+
+# Runtime uploads
+public/uploads/node_modules/
+.next/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
