@@ -1,0 +1,267 @@
+// GLOW 'N' GO Beauty & Cosmetics — database schema
+// Run: npx prisma migrate dev --name init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  STYLIST // hands-on beauty services (e.g. Claudia Mwende) — own appointments/profile
+  STAFF   // inventory, products, orders — not appointments they didn't take
+  ADMIN
+}
+
+/// Moderation state, separate from Role. A SUSPENDED/FLAGGED/DELETED
+/// account cannot log in regardless of role — see auth.controller.login.
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED  // temporarily blocked by an admin, reversible
+  FLAGGED    // marked spam/suspicious, pending security review
+  DELETED    // soft-deleted; kept for audit trail instead of hard-deleting rows
+}
+
+enum Gender {
+  MEN
+  WOMEN
+  UNISEX
+  KIDS
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+enum ActivityType {
+  LOGIN
+  LOGOUT
+  LOGIN_FAILED
+  PAGE_VIEW
+  REGISTER
+  PASSWORD_RESET
+  ACCOUNT_SUSPENDED
+  ACCOUNT_FLAGGED
+  ACCOUNT_REACTIVATED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  firstName    String
+  lastName     String
+  email        String        @unique
+  phone        String        @unique
+  passwordHash String
+  role         Role          @default(CUSTOMER)
+  status       AccountStatus @default(ACTIVE)
+  avatarUrl    String?
+
+  title        String?
+  bio          String?
+
+  emailVerified             Boolean   @default(false)
+  verificationCode          String?
+  verificationCodeExpiresAt DateTime?
+
+  lastSeenAt  DateTime?
+  lastLoginAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments  Appointment[]  @relation("CustomerAppointments")
+  stylistFor    Appointment[]  @relation("StylistAppointments")
+  orders        Order[]
+  reviews       Review[]
+  refreshTokens RefreshToken[]
+  activityLogs  ActivityLog[]
+
+  @@index([email])
+  @@index([status])
+}
+
+/// One row per meaningful event (login, page view, moderation action).
+/// Deliberately event-level rather than click-level: a durable table of
+/// every DOM click would grow unbounded and isn't something a small
+/// business needs to query — page-level + security events cover the
+/// stated goal (spot suspicious activity, see time-on-site) without
+/// building a full clickstream analytics pipeline.
+model ActivityLog {
+  id        String       @id @default(cuid())
+  userId    String?
+  user      User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type      ActivityType
+  path      String?
+  metadata  String?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime     @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ServiceCategory {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  slug     String    @unique
+  services Service[]
+}
+
+model Service {
+  id           String          @id @default(cuid())
+  name         String
+  slug         String          @unique
+  description  String
+  price        Int
+  durationMins Int
+  imageUrl     String?
+  isActive     Boolean         @default(true)
+  categoryId   String
+  category     ServiceCategory @relation(fields: [categoryId], references: [id])
+  appointments Appointment[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([categoryId])
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  customerId  String
+  customer    User              @relation("CustomerAppointments", fields: [customerId], references: [id])
+  stylistId   String?
+  stylist     User?             @relation("StylistAppointments", fields: [stylistId], references: [id])
+  serviceId   String
+  service     Service           @relation(fields: [serviceId], references: [id])
+  date        DateTime
+  timeSlot    String
+  status      AppointmentStatus @default(PENDING)
+  notes       String?
+  qrToken     String            @unique @default(cuid())
+  confirmedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([customerId])
+  @@index([stylistId])
+  @@index([date])
+  @@index([qrToken])
+}
+
+model ProductCategory {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  slug     String    @unique
+  products Product[]
+}
+
+model Product {
+  id             String          @id @default(cuid())
+  name           String
+  slug           String          @unique
+  description    String
+  price          Int
+  compareAtPrice Int?
+  stock          Int             @default(0)
+  imageUrl       String?
+  categoryId     String
+  category       ProductCategory @relation(fields: [categoryId], references: [id])
+  gender         Gender          @default(UNISEX)
+  brand          String?
+  sku            String?         @unique
+  featured       Boolean         @default(false)
+  reviews        Review[]
+  orderItems     OrderItem[]
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([categoryId])
+  @@index([gender])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@unique([userId, productId])
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+  guestEmail      String?
+  guestPhone      String?
+  items           OrderItem[]
+  subtotal        Int
+  shipping        Int           @default(0)
+  total           Int
+  status          OrderStatus   @default(PENDING)
+  deliveryAddress String
+  mpesaCheckoutId String?       @unique
+  mpesaReceiptNo  String?
+  paymentStatus   PaymentStatus @default(PENDING)
+  feedbackSentAt  DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([mpesaCheckoutId])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Int
+
+  @@index([orderId])
+}

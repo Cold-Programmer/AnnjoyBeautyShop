@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    @apply bg-cream text-ink font-body antialiased dark:bg-[#141010] dark:text-cream/90;
+  }
+  h1, h2, h3, h4 { @apply font-display; }
+  ::selection { @apply bg-rosegold/30; }
+  :focus-visible { outline: 2px solid #B76E79; outline-offset: 3px; }
+}
+
+@layer components {
+  .eyebrow {
+    @apply inline-block text-[11px] tracking-widest2 uppercase text-rosegold-dark font-semibold;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink text-cream px-7 py-3.5
+      text-sm font-medium tracking-wide transition-all duration-300 ease-out
+      hover:bg-rosegold-dark hover:shadow-card hover:-translate-y-0.5
+      active:translate-y-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-rosegold
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 bg-transparent
+      text-ink px-7 py-3.5 text-sm font-medium tracking-wide transition-all duration-300 ease-out
+      hover:border-rosegold hover:text-rosegold-dark hover:-translate-y-0.5
+      dark:border-cream/15 dark:text-cream/80;
+  }
+  .card {
+    @apply bg-white/70 backdrop-blur rounded-xl2 border border-ink/5 shadow-card transition-all duration-300
+      hover:-translate-y-1 hover:shadow-soft
+      dark:border-cream/10 dark:bg-[#1c1717]/70;
+  }
+  .divider-gold {
+    @apply h-px w-16 bg-gradient-to-r from-gold to-transparent;
+  }
+  .ticket-notch {
+    background-image: radial-gradient(circle at 0 50%, transparent 10px, white 10px),
+      radial-gradient(circle at 100% 50%, transparent 10px, white 10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

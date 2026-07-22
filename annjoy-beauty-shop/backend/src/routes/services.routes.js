@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const services_controller_1 = require("../controllers/services.controller");
+const auth_1 = require("../middleware/auth");
+const asyncHandler_1 = require("../middleware/asyncHandler");
+const router = (0, express_1.Router)();
+router.get("/", auth_1.requireAuth, (0, asyncHandler_1.asyncHandler)(services_controller_1.listServices));
+router.get("/:slug", auth_1.requireAuth, (0, asyncHandler_1.asyncHandler)(services_controller_1.getServiceBySlug));
+router.post("/", auth_1.requireAuth, (0, auth_1.requireRole)("ADMIN", "STAFF"), (0, asyncHandler_1.asyncHandler)(services_controller_1.createService));
+router.patch("/:id", auth_1.requireAuth, (0, auth_1.requireRole)("ADMIN", "STAFF"), (0, asyncHandler_1.asyncHandler)(services_controller_1.updateService));
+router.delete("/:id", auth_1.requireAuth, (0, auth_1.requireRole)("ADMIN"), (0, asyncHandler_1.asyncHandler)(services_controller_1.deleteService));
+exports.default = router;

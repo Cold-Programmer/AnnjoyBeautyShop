@@ -1,0 +1,65 @@
+# Render Blueprint — optional convenience. On Render: New → Blueprint →
+# point at this repo with backend/ as the root, and Render reads this
+# file to pre-fill most of the setup. You still need to fill in the
+# "sync: false" secrets manually in the dashboard (Render won't let
+# secrets live in a committed file, correctly).
+services:
+  - type: web
+    name: glow-n-go-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: ACCESS_TOKEN_TTL
+        value: 15m
+      - key: REFRESH_TOKEN_TTL_DAYS
+        value: 30
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_SECURE
+        value: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM_NAME
+        value: "GLOW 'N' GO Beauty & Cosmetics"
+      - key: EMAIL_FROM_ADDR
+        sync: false
+      - key: ADMIN_NOTIFICATION_EMAIL
+        sync: false
+      - key: MPESA_ENV
+        value: sandbox
+      - key: MPESA_BASE_URL
+        value: https://sandbox.safaricom.co.ke
+      - key: MPESA_CONSUMER_KEY
+        sync: false
+      - key: MPESA_CONSUMER_SECRET
+        sync: false
+      - key: MPESA_SHORTCODE
+        value: "174379"
+      - key: MPESA_PASSKEY
+        sync: false
+      - key: MPESA_TRANSACTION_TYPE
+        value: CustomerPayBillOnline
+      - key: MPESA_STK_CALLBACK_URL
+        sync: false
+      - key: MPESA_TIMEOUT_URL
+        sync: false

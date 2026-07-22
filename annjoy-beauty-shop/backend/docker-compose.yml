@@ -1,0 +1,23 @@
+# Optional: spins up a local Postgres so you don't need to install it
+# yourself. Run: docker compose up -d
+#
+# Host port is 5433 (not the default 5432) specifically to avoid clashing
+# with a Postgres you might already have installed/running natively —
+# that exact conflict ("port is already allocated") is what happened last
+# time. If 5433 is also taken, change BOTH the port mapping below and
+# DATABASE_URL in .env to match.
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: glow_n_go
+    ports:
+      - "5433:5432"
+    volumes:
+      - glow_n_go_pg_data:/var/lib/postgresql/data
+
+volumes:
+  glow_n_go_pg_data:
