@@ -5,7 +5,11 @@ import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { env } from "./config/env";
-import { errorHandler, notFoundHandler, registerProcessSafetyNets } from "./middleware/errorHandler";
+import {
+  errorHandler,
+  notFoundHandler,
+  registerProcessSafetyNets,
+} from "./middleware/errorHandler";
 
 import authRoutes from "./routes/auth.routes";
 import servicesRoutes from "./routes/services.routes";
@@ -21,22 +25,79 @@ registerProcessSafetyNets();
 
 const app = express();
 
+/**
+ * ✅ REQUIRED FOR RENDER
+ * Fixes express-rate-limit warning:
+ * ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+ */
+app.set("trust proxy", 1);
+
 // crossOriginResourcePolicy relaxed so the frontend (a different origin/
-// port in dev) can actually load images served from /uploads — Helmet's
-// default of "same-origin" would silently block them.
-app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
-app.use(cors({ origin: env.corsOrigin, credentials: true }));
+// port in dev) can actually load images served from /uploads.
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
+app.use(
+  cors({
+    origin: env.corsOrigin,
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Global baseline rate limit; auth + payment routes have their own
-// tighter limits layered on top (defined in their respective route files).
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
+// Global rate limiter
+app.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
+
+/**
+ * ✅ Root endpoint
+ */
+app.get("/", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "GLOW 'N' GO Beauty & Cosmetics API is running.",
+    version: "1.0.0",
+    environment: env.nodeEnv,
+  });
+});
+
+/**
+ * Existing health endpoint
+ */
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    status: "ok",
+    environment: env.nodeEnv,
+  });
+});
+
+/**
+ * Additional API health endpoint
+ */
+app.get("/api/health", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    status: "healthy",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    environment: env.nodeEnv,
+  });
+});
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
-app.get("/health", (_req, res) => res.status(200).json({ status: "ok", env: env.nodeEnv }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/services", servicesRoutes);
@@ -49,13 +110,14 @@ app.use("/api/activity", activityRoutes);
 app.use("/api/uploads", uploadRoutes);
 
 app.use(notFoundHandler);
-app.use(errorHandler); // must be last
+app.use(errorHandler);
 
 const server = app.listen(env.port, () => {
-  console.log(`[server] GLOW 'N' GO API running on port ${env.port} (${env.nodeEnv})`);
+  console.log(
+    `[server] GLOW 'N' GO API running on port ${env.port} (${env.nodeEnv})`
+  );
 });
 
-// Avoid dropped connections behind a reverse proxy with a shorter timeout.
 server.keepAliveTimeout = 65_000;
 server.headersTimeout = 66_000;
 
