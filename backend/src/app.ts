@@ -4,6 +4,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import path from "path";
+
 import { env } from "./config/env";
 import {
   errorHandler,
@@ -26,20 +27,24 @@ registerProcessSafetyNets();
 const app = express();
 
 /**
- * ✅ REQUIRED FOR RENDER
- * Fixes express-rate-limit warning:
- * ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
+ * Required when running behind Render's reverse proxy.
  */
 app.set("trust proxy", 1);
 
-// crossOriginResourcePolicy relaxed so the frontend (a different origin/
-// port in dev) can actually load images served from /uploads.
+/**
+ * Security
+ */
 app.use(
   helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: {
+      policy: "cross-origin",
+    },
   })
 );
 
+/**
+ * CORS
+ */
 app.use(
   cors({
     origin: env.corsOrigin,
@@ -47,11 +52,16 @@ app.use(
   })
 );
 
-app.use(express.json());
+/**
+ * Body parsers
+ */
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Global rate limiter
+/**
+ * Global Rate Limiter
+ */
 app.use(
   rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -62,30 +72,50 @@ app.use(
 );
 
 /**
- * ✅ Root endpoint
+ * Static uploads
+ */
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+/**
+ * Root
  */
 app.get("/", (_req, res) => {
   res.status(200).json({
     success: true,
-    message: "GLOW 'N' GO Beauty & Cosmetics API is running.",
+    application: "GLOW 'N' GO Beauty & Cosmetics API",
     version: "1.0.0",
     environment: env.nodeEnv,
+    status: "running",
+    documentation: "/api",
+    health: "/api/health",
   });
 });
 
 /**
- * Existing health endpoint
+ * API Root
  */
-app.get("/health", (_req, res) => {
+app.get("/api", (_req, res) => {
   res.status(200).json({
     success: true,
-    status: "ok",
-    environment: env.nodeEnv,
+    message: "Welcome to GLOW 'N' GO Beauty & Cosmetics API",
+    version: "1.0.0",
+    endpoints: {
+      auth: "/api/auth",
+      products: "/api/products",
+      services: "/api/services",
+      appointments: "/api/appointments",
+      orders: "/api/orders",
+      mpesa: "/api/mpesa",
+      admin: "/api/admin",
+      activity: "/api/activity",
+      uploads: "/api/uploads",
+      health: "/api/health",
+    },
   });
 });
 
 /**
- * Additional API health endpoint
+ * Health Check
  */
 app.get("/api/health", (_req, res) => {
   res.status(200).json({
@@ -94,11 +124,24 @@ app.get("/api/health", (_req, res) => {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     environment: env.nodeEnv,
+    memory: process.memoryUsage(),
   });
 });
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+/**
+ * Readiness Check
+ */
+app.get("/api/ready", (_req, res) => {
+  res.status(200).json({
+    success: true,
+    ready: true,
+    message: "Application is ready to accept requests.",
+  });
+});
 
+/**
+ * API Routes
+ */
 app.use("/api/auth", authRoutes);
 app.use("/api/services", servicesRoutes);
 app.use("/api/products", productsRoutes);
@@ -109,16 +152,33 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/activity", activityRoutes);
 app.use("/api/uploads", uploadRoutes);
 
+/**
+ * 404 Handler
+ */
 app.use(notFoundHandler);
+
+/**
+ * Global Error Handler
+ */
 app.use(errorHandler);
 
+/**
+ * Start Server
+ */
 const server = app.listen(env.port, () => {
-  console.log(
-    `[server] GLOW 'N' GO API running on port ${env.port} (${env.nodeEnv})`
-  );
+  console.log("======================================");
+  console.log("🚀 GLOW 'N' GO Backend Started");
+  console.log(`🌍 Environment : ${env.nodeEnv}`);
+  console.log(`📡 Port        : ${env.port}`);
+  console.log(`❤️ Health      : /api/health`);
+  console.log(`📖 API Root    : /api`);
+  console.log("======================================");
 });
 
-server.keepAliveTimeout = 65_000;
-server.headersTimeout = 66_000;
+/**
+ * Prevent dropped connections on Render.
+ */
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
 
 export default app;
